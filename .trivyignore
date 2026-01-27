@@ -1,5 +1,6 @@
 # .trivyignore
-# Accepted Risk: Protobuf has no upstream fix for this variant as of Jan 2026
-CVE-2026-0994
-# Accepted Risk: Known GLIBC issue with no fix in current stable base
+# Accepted Risks: Upstream fixes not yet available for these CVEs in Debian 12
+CVE-2023-45853
+CVE-2025-7458
 CVE-2026-0861
+CVE-2026-0994

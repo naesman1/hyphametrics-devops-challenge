@@ -31,12 +31,12 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'local-scan-image:latest' # Must match the build tag
+          image-ref: 'local-scan-image:latest'
           format: 'table'
-          exit-code: '1'
+          exit-code: '1' # Sigue fallando si hay vulnerabilidades no ignoradas
           severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true # Ignores vulnerabilities without a fix
-          scanners: 'vuln'     # Only scan for vulnerabilities, skip secrets
+          ignore-unfixed: true # Ignora lo que no tiene parche oficial aún
+          scanners: 'vuln'     # Evita el escáner de secretos en archivos binarios
 
   deploy:
     name: Infrastructure and App Deployment

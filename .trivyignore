@@ -1,3 +1,6 @@
-# Accepted risk: Upstream protobuf vulnerability has no fix as of Jan 2026.
-# We are monitoring for the next patch release.
+# Accepted Risks: These have no fix available in Debian 12 (Bookworm)
+CVE-2023-45853
+CVE-2025-7458
+CVE-2026-0861
+# Accepted Risk: Protobuf has no upstream fix for this DoS variant as of Jan 2026
 CVE-2026-0994

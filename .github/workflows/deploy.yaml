@@ -27,13 +27,15 @@ jobs:
       - name: Build Local Image for Scanning
         run: docker build -t local-scan-image ./app
 
-      - name: Scan Image with Trivy
-        uses: aquasecurity/trivy-action@master
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.29.0 # Use the latest version
         with:
           image-ref: 'local-scan-image'
           format: 'table'
-          exit-code: '1' # Stop pipeline on Critical/High findings
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true # This tells Trivy to ignore things the OS maintainers haven't fixed yet
+          trivyignores: .trivyignore # Explicitly use the ignore file
 
   deploy:
     name: Infrastructure and App Deployment

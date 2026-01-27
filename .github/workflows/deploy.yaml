@@ -24,18 +24,15 @@ jobs:
           flake8 ./app --count --select=E9,F63,F7,F82 --show-source --statistics
 
       # Vulnerability scanning
-      - name: Build Local Image for Scanning
-        run: docker build -t local-scan-image ./app
-
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.29.0 # Use the latest version
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'local-scan-image'
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true # This tells Trivy to ignore things the OS maintainers haven't fixed yet
-          trivyignores: .trivyignore # Explicitly use the ignore file
+          ignore-unfixed: true
+          scanners: 'vuln'
 
   deploy:
     name: Infrastructure and App Deployment

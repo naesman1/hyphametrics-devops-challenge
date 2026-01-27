@@ -1,74 +1,76 @@
-name: Continuous Deployment
+name: CI/CD Log Archiver
 
 on:
   push:
     tags:
-      - 'v*' # Trigger for versioning tags (e.g., v1.0.1)
-
-permissions:
-  contents: read
-  id-token: write # Required for Workload Identity Federation
+      - 'v*' # Triggers on version tags like v1.0.14
 
 jobs:
-  security-and-lint:
-    name: Code Quality and Security
+  deploy:
+    name: Build, Scan and Deploy
     runs-on: ubuntu-latest
+
+    # Add permissions for WIF authentication
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # 1. Linting
+      # --- STEP 1: CODE QUALITY (CI) ---
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Lint with Flake8
         run: |
           pip install flake8
+          # Stop the build if there are Python syntax errors or undefined names
           flake8 ./app --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      # 2. Build Image for Scanning (Crucial step)
+      # --- STEP 2: SECURITY SCAN (DevSecOps) ---
       - name: Build Local Image for Scanning
         run: docker build -t local-scan-image:latest ./app
 
-      # 3. Vulnerability Scan
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'local-scan-image:latest'
           format: 'table'
-          exit-code: '1'
+          exit-code: '1' # Fails the pipeline if HIGH/CRITICAL vulns are found
           severity: 'CRITICAL,HIGH'
-          # This is key: it ignores vulnerabilities that don't have a fix yet
-          ignore-unfixed: true 
-          # Explicitly point to the ignore file
-          trivyignores: .trivyignore
-          # Scan only for vulnerabilities to avoid false positives in binaries
+          ignore-unfixed: true
           scanners: 'vuln'
+          trivyignores: .trivyignore
 
-  deploy:
-    name: Infrastructure and App Deployment
-    needs: security-and-lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      # Secure Authentication via OIDC (No JSON Keys)
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+      # --- STEP 3: GOOGLE CLOUD AUTH (CD) ---
+      - id: 'auth'
+        name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v2'
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
+          workload_identity_provider: '${{ secrets.GCP_WIF_PROVIDER }}'
+          service_account: '${{ secrets.GCP_SA_EMAIL }}'
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
 
-      # Container Build & Push
+      # --- STEP 4: DOCKER AUTH & PUSH ---
+      - name: 'Docker Auth'
+        run: |
+          # This is the secret sauce: it bridges gcloud auth with docker push
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
       - name: Build and Push to Artifact Registry
         run: |
-          gcloud auth configure-docker us-central1-docker.pkg.dev
-          IMAGE_PATH=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}
-          docker build -t $IMAGE_PATH ./app
-          docker push $IMAGE_PATH
+          # We use the tag version for the image tag
+          IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}"
+          docker build -t $IMAGE_NAME ./app
+          docker push $IMAGE_NAME
 
-      # Infrastructure as Code Execution
+      # --- STEP 5: INFRASTRUCTURE AS CODE ---
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -77,7 +79,8 @@ jobs:
         working-directory: ./terraform
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -var="project_id=${{ secrets.GCP_PROJECT_ID }}"
+        run: |
+          terraform apply -auto-approve \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="app_image=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}"
         working-directory: ./terraform
-        env:
-          GOOGLE_IAM_WORKLOAD_IDENTITY_POOL_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER }}

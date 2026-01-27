@@ -1,14 +1,13 @@
-# Use a slim Python image to reduce size
 FROM python:3.11-slim as builder
-
 WORKDIR /app
+
+# Actualizamos los paquetes del sistema para corregir CVE-2026-0861
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends build-essential
+
 COPY requirements.txt .
-
-# Install dependencies in a local user directory
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-FROM python:3.11-slim
-WORKDIR /app
+RUN pip install --no-cache-dir --user --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --user -r requirements.txt
 
 # Create a non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser

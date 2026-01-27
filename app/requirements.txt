@@ -1,8 +1,8 @@
-# app/requirements.txt
+# Main Dependencies
 google-cloud-pubsub>=2.18.0
 google-cloud-storage>=2.10.0
 
-# Security overrides for Trivy HIGH findings
+# Security Overrides (Fixes HIGH vulnerabilities)
 jaraco.context>=6.1.0
 wheel>=0.46.2
 protobuf>=5.0.0

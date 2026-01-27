@@ -1,17 +1,18 @@
-# Project-specific variables for reusability 
+# terraform/variables.tf
+
 variable "project_id" {
-  description = "The GCP Project ID where resources will be deployed"
+  description = "The GCP Project ID"
   type        = string
+}
+
+variable "app_image" {
+  description = "The Docker image to deploy"
+  type        = string
+  default     = "latest" # Valor por defecto por si acaso
 }
 
 variable "region" {
-  description = "The GCP region for the storage bucket and pub/sub resources"
+  description = "GCP Region"
   type        = string
   default     = "us-central1"
-}
-
-variable "environment" {
-  description = "Deployment environment (e.g., dev, prod)"
-  type        = string
-  default     = "dev"
 }

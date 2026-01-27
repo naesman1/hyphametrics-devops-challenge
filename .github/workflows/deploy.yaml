@@ -72,8 +72,12 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Apply
+      - name: Terraform Init
+        run: terraform init
         working-directory: ./terraform
-        run: |
-          terraform init
-          terraform apply -auto-approve -var="project_id=${{ secrets.GCP_PROJECT_ID }}"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var="project_id=${{ secrets.GCP_PROJECT_ID }}"
+        working-directory: ./terraform
+        env:
+          GOOGLE_IAM_WORKLOAD_IDENTITY_POOL_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER }}

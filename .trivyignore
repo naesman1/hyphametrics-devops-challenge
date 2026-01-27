@@ -1,0 +1,4 @@
+# .trivyignore
+# Accepted risk: No upstream fix available for protobuf as of Jan 2026.
+# Monitoring for updates.
+CVE-2026-0994

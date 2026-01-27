@@ -1,0 +1,72 @@
+name: Continuous Deployment
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger for versioning tags (e.g., v1.0.1)
+
+permissions:
+  contents: read
+  id-token: write # Required for Workload Identity Federation
+
+jobs:
+  security-and-lint:
+    name: Code Quality and Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Code style validation
+      - name: Lint with Flake8
+        run: |
+          pip install flake8
+          flake8 ./app --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      # Vulnerability scanning
+      - name: Build Local Image for Scanning
+        run: docker build -t local-scan-image ./app
+
+      - name: Scan Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'local-scan-image'
+          format: 'table'
+          exit-code: '1' # Stop pipeline on Critical/High findings
+          severity: 'CRITICAL,HIGH'
+
+  deploy:
+    name: Infrastructure and App Deployment
+    needs: security-and-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Secure Authentication via OIDC (No JSON Keys)
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # Container Build & Push
+      - name: Build and Push to Artifact Registry
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+          IMAGE_PATH=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}
+          docker build -t $IMAGE_PATH ./app
+          docker push $IMAGE_PATH
+
+      # Infrastructure as Code Execution
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        run: |
+          terraform init
+          terraform apply -auto-approve -var="project_id=${{ secrets.GCP_PROJECT_ID }}"

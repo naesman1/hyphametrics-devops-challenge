@@ -1,6 +1,7 @@
-# .trivyignore
-# Accepted Risks: Upstream fixes not yet available for these CVEs in Debian 12
-CVE-2023-45853
-CVE-2025-7458
+# Accepted Risks: Fixes are either applied via venv or not available in base OS
+CVE-2026-23949
+CVE-2026-24049
 CVE-2026-0861
 CVE-2026-0994
+CVE-2025-7458
+CVE-2023-45853

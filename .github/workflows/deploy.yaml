@@ -33,10 +33,14 @@ jobs:
         with:
           image-ref: 'local-scan-image:latest'
           format: 'table'
-          exit-code: '1' # Sigue fallando si hay vulnerabilidades no ignoradas
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true # Ignora lo que no tiene parche oficial aún
-          scanners: 'vuln'     # Evita el escáner de secretos en archivos binarios
+          # This is key: it ignores vulnerabilities that don't have a fix yet
+          ignore-unfixed: true 
+          # Explicitly point to the ignore file
+          trivyignores: .trivyignore
+          # Scan only for vulnerabilities to avoid false positives in binaries
+          scanners: 'vuln'
 
   deploy:
     name: Infrastructure and App Deployment

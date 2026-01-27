@@ -1,60 +1,54 @@
 # STAGE 1: Build environment
-# Using a stable base image for production consistency
 FROM python:3.11-slim-bookworm AS builder
 
-# Prevent Python from writing .pyc files and enable unbuffered logging
+# Environment variables to optimize the build
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies required for building certain Python wheels
+# Install system-level build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a virtual environment to isolate clean dependencies
+# Create and isolate a virtual environment
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Upgrade core tools before installing application requirements
+# Upgrade core build tools within the venv
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Copy requirements and install
+# Install application dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Force upgrade specific problematic libraries to their secure versions
-# This overrides any transitive dependencies pulled by other packages
-RUN pip install --no-cache-dir --upgrade \
-    jaraco.context>=6.1.0 \
-    wheel>=0.46.3 \
-    protobuf>=5.0.0
-
-# STAGE 2: Runtime environment
+# STAGE 2: Secure Runtime
 FROM python:3.11-slim-bookworm
-
-# Maintain environment configurations
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 
-# Security: Apply latest OS security patches
+# SECURITY: Patch OS-level vulnerabilities
 RUN apt-get update && apt-get upgrade -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Security: Create a non-root system user
+# SECURITY: Purge pre-installed vulnerable packages from the base image
+# This removes the versions Trivy often finds in /usr/local/lib/python3.11/
+RUN pip uninstall -y wheel jaraco.context
+
+# SECURITY: Create a non-root system user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Copy the clean virtual environment from the builder stage
+# Copy the clean virtual environment from the builder
 COPY --from=builder /opt/venv /opt/venv
 COPY main.py .
 
-# Ensure the application runs with restricted permissions
+# Set environment to use the virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Change ownership and switch user
 RUN chown -R appuser:appuser /app
 USER appuser
 
-# Execute the application
 CMD ["python", "main.py"]

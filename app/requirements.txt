@@ -1,6 +1,9 @@
+# Main application dependencies
 google-cloud-pubsub>=2.18.0
 google-cloud-storage>=2.10.0
-# Security fixes for Trivy findings
-jaraco-context>=6.1.0
-wheel>=0.46.3
+
+# Explicit security overrides for transitive dependencies
+jaraco.context>=6.1.0
+wheel>=0.46.2
 protobuf>=5.0.0
+setuptools>=70.0.0

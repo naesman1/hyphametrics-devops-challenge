@@ -27,6 +27,7 @@ resource "google_service_account" "log_archiver_sa" {
 # 4. Artifact Registry
 # Create the repository to store Docker images
 resource "google_artifact_registry_repository" "app_repo" {
+  project       = var.project_id
   location      = var.region
   repository_id = "log-archiver-repo"
   description   = "Docker repository for the log archiver app"

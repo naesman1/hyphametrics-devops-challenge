@@ -3,14 +3,13 @@ name: CI/CD Log Archiver
 on:
   push:
     tags:
-      - 'v*' # Triggers on version tags like v1.0.14
+      - 'v*' # Triggers on version tags like v1.0.17
 
 jobs:
   deploy:
-    name: Build, Scan and Deploy
+    name: Infrastructure and Application Deploy
     runs-on: ubuntu-latest
 
-    # Add permissions for WIF authentication
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -31,22 +30,7 @@ jobs:
           # Stop the build if there are Python syntax errors or undefined names
           flake8 ./app --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      # --- STEP 2: SECURITY SCAN (DevSecOps) ---
-      - name: Build Local Image for Scanning
-        run: docker build -t local-scan-image:latest ./app
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'local-scan-image:latest'
-          format: 'table'
-          exit-code: '1' # Fails the pipeline if HIGH/CRITICAL vulns are found
-          severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true
-          scanners: 'vuln'
-          trivyignores: .trivyignore
-
-      # --- STEP 3: GOOGLE CLOUD AUTH (CD) ---
+      # --- STEP 2: AUTHENTICATION (WIF) ---
       - id: 'auth'
         name: Authenticate to Google Cloud
         uses: 'google-github-actions/auth@v2'
@@ -57,20 +41,8 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
 
-      # --- STEP 4: DOCKER AUTH & PUSH ---
-      - name: 'Docker Auth'
-        run: |
-          # This is the secret sauce: it bridges gcloud auth with docker push
-          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
-      - name: Build and Push to Artifact Registry
-        run: |
-          # We use the tag version for the image tag
-          IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}"
-          docker build -t $IMAGE_NAME ./app
-          docker push $IMAGE_NAME
-
-      # --- STEP 5: INFRASTRUCTURE AS CODE ---
+      # --- STEP 3: INFRASTRUCTURE (TERRAFORM) ---
+      # Run Terraform first to ensure the Artifact Registry repository exists
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -81,6 +53,33 @@ jobs:
       - name: Terraform Apply
         run: |
           terraform apply -auto-approve \
-            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
-            -var="app_image=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}"
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}"
         working-directory: ./terraform
+
+      # --- STEP 4: SECURITY SCAN (DEVSECOPS) ---
+      - name: Build Local Image for Scanning
+        run: docker build -t local-scan-image:latest ./app
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'local-scan-image:latest'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          scanners: 'vuln'
+          trivyignores: .trivyignore
+
+      # --- STEP 5: DEPLOYMENT (DOCKER PUSH) ---
+      - name: 'Docker Auth'
+        run: |
+          # Bridges gcloud authentication with the local docker daemon
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build and Push to Artifact Registry
+        run: |
+          # Repository is guaranteed to exist due to Step 3
+          IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}"
+          docker build -t $IMAGE_NAME ./app
+          docker push $IMAGE_NAME

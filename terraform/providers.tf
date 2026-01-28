@@ -10,18 +10,20 @@ terraform {
     }
   }
 
-  # --- OPTION 1: Real Backend (Active for your local testing) ---
-  # This uses the bucket you created via the CLI
+  # --- OPTION 1: Real Backend (For Cloud Mode / Production) ---
+  # This uses the GCS bucket you created via the CLI
+  # UNCOMMENT this block for Cloud Mode deployment
   backend "gcs" {
-    bucket = "devops-challenge-485523-tfstate"
+   bucket = "devops-challenge-485523-tfstate"
     prefix = "log-archiver/state"
   }
 
-  # --- OPTION 2: Mocked Backend (For documentation/evaluation) ---
-  # backend "gcs" {
-  #   bucket = "your-terraform-state-bucket"
-  #   prefix = "log-archiver/state"
-  # }
+  # --- OPTION 2: Local Backend (For Mock Mode / Local Testing) ---
+  # This stores state on your local machine
+  # UNCOMMENT this block for Mock Mode testing
+ #  backend "local" {
+ #    path = "terraform.tfstate"
+ #  }
 }
 
 provider "google" {

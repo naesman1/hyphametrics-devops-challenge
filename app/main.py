@@ -4,6 +4,24 @@ import time
 import logging
 from google.cloud import pubsub_v1, storage
 from google.api_core import exceptions
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+
+# --- DUMMY HEALTH CHECK FOR CLOUD RUN ---
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+def run_health_check():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
+
+# Start health check server in a separate thread
+threading.Thread(target=run_health_check, daemon=True).start()
+# -----------------------------------------
 
 # Configure logging for better observability
 logging.basicConfig(level=logging.INFO)

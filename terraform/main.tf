@@ -55,3 +55,8 @@ resource "google_storage_bucket_iam_member" "writer_role" {
   role   = "roles/storage.objectCreator"
   member = "serviceAccount:${google_service_account.log_archiver_sa.email}"
 }
+# Import existing Service Account
+import {
+  to = google_service_account.log_archiver_sa
+  id = "projects/devops-challenge-485523/serviceAccounts/log-archiver-sa@devops-challenge-485523.iam.gserviceaccount.com"
+}

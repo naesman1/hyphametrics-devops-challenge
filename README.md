@@ -586,6 +586,8 @@ gcloud auth login
 gcloud iam service-accounts create log-archiver-sa --display-name="Log Archiver Service Account"
 $env:PROJECT_ID = "your-project-id"
 gcloud config set project $env:PROJECT_ID
+gcloud storage buckets add-iam-policy-binding gs://${env:PROJECT_ID}-tfstate --member="serviceAccount:log-archiver-sa@${env:PROJECT_ID}.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
+
 
 # Enable APIs
 gcloud services enable `
@@ -754,7 +756,7 @@ echo "View at: https://github.com/YOUR_USERNAME/hyphametrics-devops-challenge/ac
 ```powershell
 # Commit any changes
 git add .
-git commit -m "feat: ready for CI/CD deployment"
+git commit -a -m "feat: ready for CI/CD deployment"
 
 # Create and push release tag
 git tag v1.0.0

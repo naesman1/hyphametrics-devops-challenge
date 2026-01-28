@@ -845,6 +845,8 @@ gcloud storage ls gs://${env:PROJECT_ID}-log-archive-storage/archive/
 ```bash
 # 1. Destroy infrastructure
 cd terraform
+# 1. Purge the bucket contents manually (avoids deletion errors)
+gcloud storage rm -r gs://${PROJECT_ID}-log-archive-storage
 terraform destroy -var="project_id=$PROJECT_ID" -auto-approve
 
 # 2. Delete WIF resources
@@ -877,6 +879,7 @@ gcloud iam workload-identity-pools list --location="global"
 ```powershell
 # 1. Destroy infrastructure
 cd terraform
+gcloud storage rm -r gs://${PROJECT_ID}-log-archive-storage
 terraform destroy -var="project_id=$env:PROJECT_ID" -auto-approve
 
 # 2. Delete WIF resources

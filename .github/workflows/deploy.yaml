@@ -83,7 +83,7 @@ jobs:
           IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}"
           docker build -t $IMAGE_NAME ./app
           docker push $IMAGE_NAME
-      # --- STEP 6: DEPLOY TO CLOUD RUN ---
+# --- STEP 6: DEPLOY TO CLOUD RUN ---
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
@@ -91,7 +91,8 @@ jobs:
           service: log-archiver-app
           region: us-central1
           image: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/log-archiver-repo/app:${{ github.ref_name }}
-          # Injecting the environment variables required by the Python script
+          # Use the same service account created in Terraform
+          service_account: ${{ secrets.GCP_SA_EMAIL }} 
           env_vars: |
             PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
             SUBSCRIPTION_NAME=log-archiver-sub

@@ -558,22 +558,29 @@ gcloud artifacts repositories list
 <summary><b>🐧 Bash</b></summary>
 
 ```bash
-# Run all commands from Path 2, Step 1
-gcloud auth login
-export PROJECT_ID="your-project-id"
+# 1. Set your Project ID variable
+export PROJECT_ID="<YOUR_PROJECT_ID>"
 gcloud config set project $PROJECT_ID
 
-# Enable APIs
-gcloud services enable \
-  pubsub.googleapis.com \
-  storage.googleapis.com \
-  artifactregistry.googleapis.com \
-  iam.googleapis.com \
-  sts.googleapis.com
+# 2. Authenticate with Google Cloud
+gcloud auth login
 
-# Create state bucket
-gcloud storage buckets create gs://${PROJECT_ID}-tfstate \
-  --location=us-central1
+# 3. Create the dedicated Service Account
+gcloud iam service-accounts create log-archiver-sa \
+    --display-name="Log Archiver Service Account"
+
+# 1. Create the Terraform state bucket
+gcloud storage buckets create gs://${PROJECT_ID}-tfstate --location=us-central1
+
+# 2. Grant the Service Account permissions to manage the state file
+gcloud storage buckets add-iam-policy-binding gs://${PROJECT_ID}-tfstate \
+    --member="serviceAccount:log-archiver-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/storage.objectAdmin"
+
+# Grant Owner role to the Service Account at the project level
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="serviceAccount:log-archiver-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/owner"
 ```
 </details>
 
@@ -581,17 +588,29 @@ gcloud storage buckets create gs://${PROJECT_ID}-tfstate \
 <summary><b>🪟 PowerShell</b></summary>
 
 ```powershell
-# Run all commands from Path 2, Step 1
-gcloud auth login
-gcloud iam service-accounts create log-archiver-sa --display-name="Log Archiver Service Account"
-$env:PROJECT_ID = "your-project-id"
+# Set your Project ID variable
+$env:PROJECT_ID = "<YOUR_PROJECT_ID>"
 gcloud config set project $env:PROJECT_ID
-gcloud storage buckets add-iam-policy-binding gs://${env:PROJECT_ID}-tfstate --member="serviceAccount:log-archiver-sa@${env:PROJECT_ID}.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
-# Run this to grant the Service Account permission to manage all project resources
-gcloud projects add-iam-policy-binding "devops-challenge-485523" --member="serviceAccount:log-archiver-sa@devops-challenge-485523.iam.gserviceaccount.com" --role="roles/owner"
 
-# Also ensure it has access to manage the Terraform state bucket
-gcloud storage buckets add-iam-policy-binding gs://devops-challenge-485523-tfstate --member="serviceAccount:log-archiver-sa@devops-challenge-485523.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
+# Authenticate with Google Cloud
+gcloud auth login
+
+# Create the dedicated Service Account
+gcloud iam service-accounts create log-archiver-sa `
+    --display-name="Log Archiver Service Account"
+
+# Create the Terraform state bucket
+gcloud storage buckets create gs://${env:PROJECT_ID}-tfstate --location=us-central1
+
+# Grant the Service Account permissions to manage the state file
+gcloud storage buckets add-iam-policy-binding gs://${env:PROJECT_ID}-tfstate `
+    --member="serviceAccount:log-archiver-sa@${env:PROJECT_ID}.iam.gserviceaccount.com" `
+    --role="roles/storage.objectAdmin"
+
+# Grant Owner role to the Service Account at the project level
+gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+    --member="serviceAccount:log-archiver-sa@${env:PROJECT_ID}.iam.gserviceaccount.com" `
+    --role="roles/owner"
 
 
 # Enable APIs

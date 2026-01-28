@@ -587,6 +587,11 @@ gcloud iam service-accounts create log-archiver-sa --display-name="Log Archiver 
 $env:PROJECT_ID = "your-project-id"
 gcloud config set project $env:PROJECT_ID
 gcloud storage buckets add-iam-policy-binding gs://${env:PROJECT_ID}-tfstate --member="serviceAccount:log-archiver-sa@${env:PROJECT_ID}.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
+# Run this to grant the Service Account permission to manage all project resources
+gcloud projects add-iam-policy-binding "devops-challenge-485523" --member="serviceAccount:log-archiver-sa@devops-challenge-485523.iam.gserviceaccount.com" --role="roles/owner"
+
+# Also ensure it has access to manage the Terraform state bucket
+gcloud storage buckets add-iam-policy-binding gs://devops-challenge-485523-tfstate --member="serviceAccount:log-archiver-sa@devops-challenge-485523.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
 
 
 # Enable APIs
@@ -739,7 +744,7 @@ Add these THREE secrets:
 ```bash
 # Commit any changes
 git add .
-git commit -m "feat: ready for CI/CD deployment"
+git commit -a -m "feat: ready for CI/CD deployment"
 
 # Create and push release tag
 git tag v1.0.0

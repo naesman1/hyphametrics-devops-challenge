@@ -770,7 +770,7 @@ git tag v1.0.0
 git push origin v1.0.0
 
 # Watch pipeline
-echo "View at: https://github.com/YOUR_USERNAME/hyphametrics-devops-challenge/actions"
+go to github action and monitoring the process 
 ```
 </details>
 
